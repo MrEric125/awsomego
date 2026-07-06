@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"io"
 	"strings"
 
 	"awesome/internal/ai/components"
@@ -20,7 +21,7 @@ type AIService interface {
 	ChatWithHistory(ctx context.Context, messages []Message) (string, error)
 
 	// StreamChat 流式对话（返回 channel）
-	StreamChat(ctx context.Context, message string) (<-chan string, error)
+	StreamChat(ctx context.Context, message string) (<-chan schema.Message, error)
 
 	// Summarize 文本摘要
 	Summarize(ctx context.Context, text string) (string, error)
@@ -37,6 +38,7 @@ type Message struct {
 
 // AIServiceImpl AI 服务实现
 type AIServiceImpl struct {
+	//eino 使用的模型
 	chatModel model.BaseChatModel
 }
 
@@ -93,7 +95,7 @@ func (s *AIServiceImpl) ChatWithHistory(ctx context.Context, messages []Message)
 }
 
 // StreamChat 流式对话
-func (s *AIServiceImpl) StreamChat(ctx context.Context, message string) (<-chan string, error) {
+func (s *AIServiceImpl) StreamChat(ctx context.Context, message string) (<-chan schema.Message, error) {
 	messages := []*schema.Message{
 		schema.SystemMessage("你是一个有用的AI助手。"),
 		schema.UserMessage(message),
@@ -104,7 +106,7 @@ func (s *AIServiceImpl) StreamChat(ctx context.Context, message string) (<-chan 
 		return nil, fmt.Errorf("stream chat failed: %w", err)
 	}
 
-	ch := make(chan string, 10)
+	ch := make(chan schema.Message, 10)
 
 	go func() {
 		defer close(ch)
@@ -112,12 +114,15 @@ func (s *AIServiceImpl) StreamChat(ctx context.Context, message string) (<-chan 
 
 		for {
 			chunk, err := stream.Recv()
+			if err == io.EOF {
+				return
+			}
 			if err != nil {
 				return
 			}
 
 			if chunk.Content != "" {
-				ch <- chunk.Content
+				ch <- *chunk
 			}
 
 			// 检查是否结束

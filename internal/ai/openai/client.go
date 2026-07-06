@@ -55,7 +55,7 @@ func NewClient(cfg *config.AIConfig, opts ...ClientOption) (*Client, error) {
 		return nil, fmt.Errorf("config cannot be nil")
 	}
 
-	if cfg.OpenAIAPIKey == "" {
+	if cfg.OpenAIBaseURL == "" {
 		return nil, fmt.Errorf("OpenAI API key is required")
 	}
 
@@ -111,7 +111,7 @@ type ChatCompletionRequest struct {
 	Temperature      *float64               `json:"temperature,omitempty"`
 	TopP             *float64               `json:"top_p,omitempty"`
 	N                *int                   `json:"n,omitempty"`
-	Stream           bool                   `json:"stream,omitempty"`
+	Stream           bool                   `json:"stream"`
 	Stop             interface{}            `json:"stop,omitempty"`
 	MaxTokens        *int                   `json:"max_tokens,omitempty"`
 	PresencePenalty  *float64               `json:"presence_penalty,omitempty"`
@@ -167,16 +167,30 @@ type ResponseFormat struct {
 }
 
 // ChatCompletionResponse 聊天完成响应
+//type ChatCompletionResponse struct {
+//	ID                string                 `json:"id"`
+//	Object            string                 `json:"object"`
+//	Created           int64                  `json:"created"`
+//	Model             string                 `json:"model"`
+//	Choices           []ChatChoice           `json:"choices"`
+//	Usage             Usage                  `json:"usage"`
+//	SystemFingerprint string                 `json:"system_fingerprint"`
+//	Error             *APIError              `json:"error,omitempty"`
+//	Metadata          map[string]interface{} `json:"metadata,omitempty"`
+//}
+
 type ChatCompletionResponse struct {
-	ID                string                 `json:"id"`
-	Object            string                 `json:"object"`
-	Created           int64                  `json:"created"`
-	Model             string                 `json:"model"`
-	Choices           []ChatChoice           `json:"choices"`
-	Usage             Usage                  `json:"usage"`
-	SystemFingerprint string                 `json:"system_fingerprint"`
-	Error             *APIError              `json:"error,omitempty"`
-	Metadata          map[string]interface{} `json:"metadata,omitempty"`
+	Model              string      `json:"model"`
+	CreatedAt          time.Time   `json:"created_at"`
+	Message            ChatMessage `json:"message"`
+	Done               bool        `json:"done"`
+	DoneReason         string      `json:"done_reason"`
+	TotalDuration      int64       `json:"total_duration"`
+	LoadDuration       int64       `json:"load_duration"`
+	PromptEvalCount    int         `json:"prompt_eval_count"`
+	PromptEvalDuration int         `json:"prompt_eval_duration"`
+	EvalCount          int         `json:"eval_count"`
+	EvalDuration       int         `json:"eval_duration"`
 }
 
 // ChatChoice 聊天选择
@@ -288,13 +302,16 @@ func (c *Client) doChatCompletion(ctx context.Context, req *ChatCompletionReques
 	}
 
 	url := fmt.Sprintf("%s/chat", strings.TrimSuffix(c.config.OpenAIBaseURL, "/"))
+	c.logger.Infof("chat url:%s", url)
 	httpReq, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
 	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.config.OpenAIAPIKey))
+	if c.config.OpenAIAPIKey != "" {
+		httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.config.OpenAIAPIKey))
+	}
 
 	// 从连接池获取连接
 	conn := c.connectionPool.Get()
@@ -310,6 +327,7 @@ func (c *Client) doChatCompletion(ctx context.Context, req *ChatCompletionReques
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
+	c.logger.Infof("chat resp:%s", respBody)
 
 	if httpResp.StatusCode >= 400 {
 		var apiErr APIError
@@ -355,14 +373,17 @@ func (c *Client) StreamChatCompletion(ctx context.Context, req *ChatCompletionRe
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	url := fmt.Sprintf("%s/chat/completions", strings.TrimSuffix(c.config.OpenAIBaseURL, "/"))
+	url := fmt.Sprintf("%s/chat", strings.TrimSuffix(c.config.OpenAIBaseURL, "/"))
 	httpReq, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
 	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.config.OpenAIAPIKey))
+	if c.config.OpenAIAPIKey != "" {
+		httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.config.OpenAIAPIKey))
+
+	}
 	httpReq.Header.Set("Accept", "text/event-stream")
 
 	httpResp, err := c.httpClient.Do(httpReq)
@@ -384,7 +405,7 @@ func (c *Client) StreamChatCompletion(ctx context.Context, req *ChatCompletionRe
 
 		decoder := NewSSEDecoder(httpResp.Body)
 		for {
-			chunk, err := decoder.Decode()
+			chunk, err := decoder.DecodeOllamaResp()
 			if err != nil {
 				if err == io.EOF {
 					return
@@ -408,7 +429,7 @@ type StreamChunk struct {
 	Object  string
 	Created int64
 	Model   string
-	Choices []StreamChoice
+	Choices []TrunkItem
 	Error   error
 }
 
@@ -417,6 +438,21 @@ type StreamChoice struct {
 	Index        int
 	Delta        ChatMessage
 	FinishReason string
+}
+
+// ollama 响应结果
+type TrunkItem struct {
+	Model              string      `json:"model"`
+	CreatedAt          time.Time   `json:"created_at"`
+	Message            ChatMessage `json:"message"`
+	Done               bool        `json:"done"`
+	DoneReason         string      `json:"done_reason"`
+	TotalDuration      int64       `json:"total_duration"`
+	LoadDuration       int64       `json:"load_duration"`
+	PromptEvalCount    int         `json:"prompt_eval_count"`
+	PromptEvalDuration int         `json:"prompt_eval_duration"`
+	EvalCount          int         `json:"eval_count"`
+	EvalDuration       int         `json:"eval_duration"`
 }
 
 // EmbeddingRequest 嵌入请求
@@ -459,7 +495,9 @@ func (c *Client) CreateEmbedding(ctx context.Context, req *EmbeddingRequest) (*E
 	}
 
 	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.config.OpenAIAPIKey))
+	if c.config.OpenAIAPIKey != "" {
+		httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.config.OpenAIAPIKey))
+	}
 
 	httpResp, err := c.httpClient.Do(httpReq)
 	if err != nil {

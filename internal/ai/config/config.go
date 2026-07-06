@@ -16,6 +16,7 @@ type AIConfig struct {
 	OpenAIAPIKey    string
 	OpenAIModelName string
 	OpenAIBaseURL   string
+	ModelType       string
 
 	// 通用配置
 	Timeout     int // 超时时间（秒）
@@ -37,6 +38,7 @@ func LoadAIConfig() *AIConfig {
 		OpenAIAPIKey:    getEnv("OPENAI_API_KEY", ""),
 		OpenAIModelName: getEnv("OPENAI_MODEL_NAME", ""),
 		OpenAIBaseURL:   getEnv("OPENAI_BASE_URL", ""),
+		ModelType:       getEnv("MODEL_TYPE", ""),
 
 		// 通用配置
 		Timeout:     getIntEnv("AI_TIMEOUT", 30),

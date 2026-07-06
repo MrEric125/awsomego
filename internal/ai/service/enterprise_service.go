@@ -16,24 +16,24 @@ import (
 
 // EnterpriseAIService 企业级 AI 服务
 type EnterpriseAIService struct {
-	config         *config.AIConfig
-	openaiClient   *openai.Client
-	limiter        ratelimit.Limiter
-	logger         *zap.SugaredLogger
+	config       *config.AIConfig
+	openaiClient *openai.Client
+	limiter      ratelimit.Limiter
+	logger       *zap.SugaredLogger
 
 	// 并发控制
 	semaphore      chan struct{}
 	maxConcurrency int
 
 	// 统计
-	requestCount   int64
-	successCount   int64
-	failureCount   int64
-	totalLatency   int64
+	requestCount int64
+	successCount int64
+	failureCount int64
+	totalLatency int64
 
 	// 缓存
-	cache          *ResponseCache
-	cacheEnabled   bool
+	cache        *ResponseCache
+	cacheEnabled bool
 
 	mu sync.RWMutex
 }
@@ -108,15 +108,15 @@ type ChatRequest struct {
 
 // ChatResponse 聊天响应
 type ChatResponse struct {
-	ID            string                 `json:"id"`
-	Content       string                 `json:"content"`
-	Model         string                 `json:"model"`
-	Usage         *openai.Usage          `json:"usage,omitempty"`
-	FinishReason  string                 `json:"finish_reason"`
-	Created       int64                  `json:"created"`
-	Metadata      map[string]interface{} `json:"metadata,omitempty"`
-	Cached        bool                   `json:"cached"`
-	LatencyMs     int64                  `json:"latency_ms"`
+	ID           string                 `json:"id"`
+	Content      string                 `json:"content"`
+	Model        string                 `json:"model"`
+	Usage        *openai.Usage          `json:"usage,omitempty"`
+	FinishReason string                 `json:"finish_reason"`
+	Created      int64                  `json:"created"`
+	Metadata     map[string]interface{} `json:"metadata,omitempty"`
+	Cached       bool                   `json:"cached"`
+	LatencyMs    int64                  `json:"latency_ms"`
 }
 
 // Chat 聊天
@@ -170,6 +170,7 @@ func (s *EnterpriseAIService) Chat(ctx context.Context, req *ChatRequest) (*Chat
 	if req.User != "" {
 		chatReq.User = req.User
 	}
+	chatReq.Stream = false
 
 	// 调用 API
 	resp, err := s.openaiClient.ChatCompletion(ctx, chatReq)
@@ -185,12 +186,12 @@ func (s *EnterpriseAIService) Chat(ctx context.Context, req *ChatRequest) (*Chat
 
 	// 构建响应
 	result := &ChatResponse{
-		ID:           resp.ID,
-		Content:      resp.Choices[0].Message.Content,
-		Model:        resp.Model,
-		Usage:        &resp.Usage,
-		FinishReason: resp.Choices[0].FinishReason,
-		Created:      resp.Created,
+		//ID:           resp.ID,
+		Content: resp.Message.Content,
+		Model:   resp.Model,
+		//Usage:        &resp.Usage,
+		FinishReason: resp.DoneReason,
+		Created:      resp.CreatedAt.Unix(),
 		Cached:       false,
 		LatencyMs:    latency.Milliseconds(),
 	}
@@ -259,8 +260,8 @@ func (s *EnterpriseAIService) StreamChat(ctx context.Context, req *ChatRequest) 
 
 			for _, choice := range chunk.Choices {
 				resultChan <- StreamChunk{
-					Content:       choice.Delta.Content,
-					FinishReason:  choice.FinishReason,
+					Content:      choice.Message.Content,
+					FinishReason: choice.DoneReason,
 				}
 			}
 		}
@@ -285,11 +286,11 @@ type EmbeddingRequest struct {
 
 // EmbeddingResponse 嵌入响应
 type EmbeddingResponse struct {
-	Object    string               `json:"object"`
+	Object    string                 `json:"object"`
 	Data      []openai.EmbeddingData `json:"data"`
-	Model     string               `json:"model"`
-	Usage     *openai.Usage        `json:"usage"`
-	LatencyMs int64                `json:"latency_ms"`
+	Model     string                 `json:"model"`
+	Usage     *openai.Usage          `json:"usage"`
+	LatencyMs int64                  `json:"latency_ms"`
 }
 
 // CreateEmbedding 创建嵌入
@@ -372,10 +373,10 @@ func (s *EnterpriseAIService) Close() error {
 
 // ResponseCache 响应缓存
 type ResponseCache struct {
-	items    map[string]*cacheItem
-	maxSize  int
-	ttl      time.Duration
-	mu       sync.RWMutex
+	items   map[string]*cacheItem
+	maxSize int
+	ttl     time.Duration
+	mu      sync.RWMutex
 }
 
 type cacheItem struct {

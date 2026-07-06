@@ -11,6 +11,7 @@ import (
 
 func Init() {
 	// 初始化数据库连接并执行迁移
+
 	database.InitDatabase()
 
 	// 可选：创建示例数据（开发环境）

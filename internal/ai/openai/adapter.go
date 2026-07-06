@@ -78,14 +78,14 @@ func (a *ChatModelAdapter) Generate(ctx context.Context, messages []*schema.Mess
 		return nil, fmt.Errorf("chat completion failed: %w", err)
 	}
 
-	if len(resp.Choices) == 0 {
-		return nil, fmt.Errorf("no response choices returned")
-	}
+	//if len(resp.Message) == 0 {
+	//	return nil, fmt.Errorf("no response choices returned")
+	//}
 
 	// 转换响应
 	return &schema.Message{
 		Role:    schema.Assistant,
-		Content: resp.Choices[0].Message.Content,
+		Content: resp.Message.Content,
 	}, nil
 }
 
@@ -104,12 +104,11 @@ func (a *ChatModelAdapter) Stream(ctx context.Context, messages []*schema.Messag
 			Content: msg.Content,
 		}
 	}
-
 	// 构建请求
 	req := &ChatCompletionRequest{
 		Model:    a.config.OpenAIModelName,
 		Messages: chatMessages,
-		Stream:   true,
+		Stream:   false,
 	}
 
 	// 应用选项
@@ -138,21 +137,23 @@ func (a *ChatModelAdapter) Stream(ctx context.Context, messages []*schema.Messag
 
 	go func() {
 		defer sw.Close()
+		fmt.Println("DEBUG: start reading chunks") // 确认 goroutine 启动了
 
 		for chunk := range chunkChan {
+			fmt.Printf("DEBUG: received chunk, choices=%d\n", len(chunk.Choices))
 			if chunk.Error != nil {
 				// 发送错误并关闭
-				return
+				fmt.Println("DEBUG: chunk error:", chunk.Error) // 发送错误并关闭
 			}
 
 			for _, choice := range chunk.Choices {
-				if choice.Delta.Content != "" {
+				if choice.Message.Content != "" {
 					msg := &schema.Message{
 						Role:    schema.Assistant,
-						Content: choice.Delta.Content,
+						Content: choice.Message.Content,
 					}
-					if !sw.Send(msg, nil) {
-						return
+					if sw.Send(msg, nil) {
+						//return
 					}
 				}
 			}

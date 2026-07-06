@@ -22,17 +22,17 @@ const (
 
 // ChatModelProvider 聊天模型提供者
 type ChatModelProvider struct {
-	config         *config.AIConfig
-	openaiAdapter  *openai.ChatModelAdapter
-	arkModel       model.ChatModel
-	mu             sync.RWMutex
+	config          *config.AIConfig
+	openaiAdapter   *openai.ChatModelAdapter
+	arkModel        model.ChatModel
+	mu              sync.RWMutex
 	defaultProvider ProviderType
 }
 
 // NewChatModelProvider 创建聊天模型提供者
 func NewChatModelProvider(cfg *config.AIConfig) *ChatModelProvider {
 	return &ChatModelProvider{
-		config:         cfg,
+		config:          cfg,
 		defaultProvider: ProviderArk, // 默认使用 Ark
 	}
 }
@@ -82,9 +82,9 @@ func (p *ChatModelProvider) GetOpenAIChatModel() (model.ChatModel, error) {
 		return p.openaiAdapter, nil
 	}
 
-	if p.config.OpenAIAPIKey == "" {
-		return nil, fmt.Errorf("OPENAI_API_KEY is not set")
-	}
+	//if p.config.OpenAIAPIKey == "" {
+	//	return nil, fmt.Errorf("OPENAI_API_KEY is not set")
+	//}
 
 	adapter, err := openai.NewChatModelAdapter(p.config)
 	if err != nil {
@@ -110,12 +110,16 @@ func (p *ChatModelProvider) GetChatModel(providerType ProviderType) (model.ChatM
 // GetDefaultChatModel 获取默认聊天模型
 func (p *ChatModelProvider) GetDefaultChatModel() (model.ChatModel, error) {
 	// 根据配置选择默认提供者
-	if p.config.ArkAPIKey != "" {
+	if p.config.ModelType == "ark" {
 		return p.GetArkChatModel()
 	}
 
-	if p.config.OpenAIAPIKey != "" {
+	if p.config.ModelType == "openai" {
 		return p.GetOpenAIChatModel()
+	}
+	if p.config.ModelType == "ollama" {
+		return p.getOllamaChatModel()
+
 	}
 
 	return nil, fmt.Errorf("no available chat model provider")
@@ -157,4 +161,22 @@ func (p *ChatModelProvider) Close() error {
 	}
 
 	return nil
+}
+
+func (p *ChatModelProvider) getOllamaChatModel() (model.ChatModel, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	// 如果已创建，直接返回
+	if p.openaiAdapter != nil {
+		return p.openaiAdapter, nil
+	}
+
+	adapter, err := openai.NewChatModelAdapter(p.config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create OpenAI adapter: %w", err)
+	}
+
+	p.openaiAdapter = adapter
+	return adapter, nil
 }

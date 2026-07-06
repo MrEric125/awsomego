@@ -10,6 +10,7 @@ import (
 	lch "awesome/internal/langchain/handlers"
 	"awesome/internaldig"
 	"fmt"
+	"github.com/joho/godotenv"
 	"log"
 
 	"github.com/gin-gonic/gin"
@@ -17,6 +18,10 @@ import (
 
 func main() {
 	// 初始化 AI 模块（Eino + RAG）
+
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("Error loading .env file")
+	}
 	internal.Init()
 
 	// 获取 UserHandler

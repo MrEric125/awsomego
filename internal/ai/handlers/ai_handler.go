@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"awesome/internal/ai/service"
+	"awesome/internal/evaluation/logger"
 	"io"
 	"net/http"
 	"time"
@@ -34,8 +35,8 @@ func (h *AIHandler) RegisterRoutes(r *gin.RouterGroup) {
 
 // ChatRequest 对话请求
 type ChatRequest struct {
-	Message  string    `json:"message" binding:"required"`
-	History  []Message `json:"history,omitempty"`
+	Message string    `json:"message" binding:"required"`
+	History []Message `json:"history,omitempty"`
 }
 
 // Message 消息结构
@@ -85,6 +86,7 @@ func (h *AIHandler) Chat(c *gin.Context) {
 	}
 
 	if err != nil {
+		logger.Infof("chat error:%v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Chat failed: " + err.Error(),
 		})

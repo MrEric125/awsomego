@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 )
 
 // SSEDecoder SSE 解码器
@@ -20,8 +21,45 @@ func NewSSEDecoder(r io.Reader) *SSEDecoder {
 	}
 }
 
+type T struct {
+	Model     string    `json:"model"`
+	CreatedAt time.Time `json:"created_at"`
+	Message   struct {
+		Role    string `json:"role"`
+		Content string `json:"content"`
+	} `json:"message"`
+	Done bool `json:"done"`
+}
+
+func (d *SSEDecoder) DecodeOllamaResp() (*StreamChunk, error) {
+
+	chunk := StreamChunk{}
+
+	for {
+		line, err := d.reader.ReadString('\n')
+		if err != nil {
+			return nil, err
+		}
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		var streamResp TrunkItem
+
+		if err := json.Unmarshal([]byte(line), &streamResp); err != nil {
+			return nil, fmt.Errorf("failed to parse SSE data: %w", err)
+		}
+		chunk.Choices = append(chunk.Choices, streamResp)
+		if streamResp.Done {
+			return &chunk, nil
+		}
+	}
+
+}
+
 // Decode 解码下一个事件
 func (d *SSEDecoder) Decode() (*StreamChunk, error) {
+
 	for {
 		line, err := d.reader.ReadString('\n')
 		if err != nil {
@@ -51,8 +89,8 @@ func (d *SSEDecoder) Decode() (*StreamChunk, error) {
 				Created int64  `json:"created"`
 				Model   string `json:"model"`
 				Choices []struct {
-					Index        int `json:"index"`
-					Delta        struct {
+					Index int `json:"index"`
+					Delta struct {
 						Role    string `json:"role,omitempty"`
 						Content string `json:"content,omitempty"`
 					} `json:"delta"`
@@ -64,26 +102,26 @@ func (d *SSEDecoder) Decode() (*StreamChunk, error) {
 				return nil, fmt.Errorf("failed to parse SSE data: %w", err)
 			}
 
-			chunk := &StreamChunk{
-				ID:      streamResp.ID,
-				Object:  streamResp.Object,
-				Created: streamResp.Created,
-				Model:   streamResp.Model,
-				Choices: make([]StreamChoice, len(streamResp.Choices)),
-			}
+			//chunk := &StreamChunk{
+			//	ID:      streamResp.ID,
+			//	Object:  streamResp.Object,
+			//	Created: streamResp.Created,
+			//	Model:   streamResp.Model,
+			//	Choices: make([]StreamChoice, len(streamResp.Choices)),
+			//}
+			//
+			//for i, choice := range streamResp.Choices {
+			//	chunk.Choices[i] = TrunkItem{
+			//		Index: choice.Index,
+			//		Delta: ChatMessage{
+			//			Role:    choice.Delta.Role,
+			//			Content: choice.Delta.Content,
+			//		},
+			//		FinishReason: choice.FinishReason,
+			//	}
+			//}
 
-			for i, choice := range streamResp.Choices {
-				chunk.Choices[i] = StreamChoice{
-					Index: choice.Index,
-					Delta: ChatMessage{
-						Role:    choice.Delta.Role,
-						Content: choice.Delta.Content,
-					},
-					FinishReason: choice.FinishReason,
-				}
-			}
-
-			return chunk, nil
+			//return chunk, nil
 		}
 	}
 }
