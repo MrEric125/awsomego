@@ -107,20 +107,21 @@ type ChatRequest struct {
 }
 
 // ChatResponse 聊天响应
-type ChatResponse struct {
-	ID           string                 `json:"id"`
-	Content      string                 `json:"content"`
-	Model        string                 `json:"model"`
-	Usage        *openai.Usage          `json:"usage,omitempty"`
-	FinishReason string                 `json:"finish_reason"`
-	Created      int64                  `json:"created"`
-	Metadata     map[string]interface{} `json:"metadata,omitempty"`
-	Cached       bool                   `json:"cached"`
-	LatencyMs    int64                  `json:"latency_ms"`
-}
+//type ChatResponse struct {
+//	ID           string                 `json:"id"`
+//	Content      string                 `json:"content"`
+//	Model        string                 `json:"model"`
+//	Usage        *openai.Usage          `json:"usage,omitempty"`
+//	FinishReason string                 `json:"finish_reason"`
+//	Created      int64                  `json:"created"`
+//	Metadata     map[string]interface{} `json:"metadata,omitempty"`
+//	Cached       bool                   `json:"cached"`
+//	LatencyMs    int64                  `json:"latency_ms"`
+//	Chosice []
+//}
 
 // Chat 聊天
-func (s *EnterpriseAIService) Chat(ctx context.Context, req *ChatRequest) (*ChatResponse, error) {
+func (s *EnterpriseAIService) Chat(ctx context.Context, req *ChatRequest) (*openai.ChatCompletionResponse, error) {
 	startTime := time.Now()
 	atomic.AddInt64(&s.requestCount, 1)
 
@@ -128,8 +129,8 @@ func (s *EnterpriseAIService) Chat(ctx context.Context, req *ChatRequest) (*Chat
 	if s.cacheEnabled && req.UseCache {
 		cacheKey := s.generateCacheKey(req)
 		if cached, ok := s.cache.Get(cacheKey); ok {
-			cached.Cached = true
-			cached.LatencyMs = time.Since(startTime).Milliseconds()
+			//cached.Cached = true
+			//cached.LatencyMs = time.Since(startTime).Milliseconds()
 			return cached, nil
 		}
 	}
@@ -185,24 +186,24 @@ func (s *EnterpriseAIService) Chat(ctx context.Context, req *ChatRequest) (*Chat
 	atomic.AddInt64(&s.totalLatency, latency.Nanoseconds())
 
 	// 构建响应
-	result := &ChatResponse{
-		//ID:           resp.ID,
-		Content: resp.Message.Content,
-		Model:   resp.Model,
-		//Usage:        &resp.Usage,
-		FinishReason: resp.DoneReason,
-		Created:      resp.CreatedAt.Unix(),
-		Cached:       false,
-		LatencyMs:    latency.Milliseconds(),
-	}
+	//result := &ChatResponse{
+	//	ID:           resp.ID,
+	//	Content:      resp.Choices[0].Delta.Content,
+	//	Model:        resp.Model,
+	//	Usage:        &resp.Usage,
+	//	FinishReason: resp.Choices[0].FinishReason,
+	//	Created:      resp.Created,
+	//	Cached:       false,
+	//	LatencyMs:    latency.Milliseconds(),
+	//}
 
 	// 缓存结果
 	if s.cacheEnabled && req.UseCache {
 		cacheKey := s.generateCacheKey(req)
-		s.cache.Set(cacheKey, result)
+		s.cache.Set(cacheKey, resp)
 	}
 
-	return result, nil
+	return resp, nil
 }
 
 // StreamChat 流式聊天
@@ -261,7 +262,7 @@ func (s *EnterpriseAIService) StreamChat(ctx context.Context, req *ChatRequest) 
 			for _, choice := range chunk.Choices {
 				resultChan <- StreamChunk{
 					Content:      choice.Message.Content,
-					FinishReason: choice.DoneReason,
+					FinishReason: choice.FinishReason,
 				}
 			}
 		}
@@ -380,7 +381,7 @@ type ResponseCache struct {
 }
 
 type cacheItem struct {
-	response  *ChatResponse
+	response  *openai.ChatCompletionResponse
 	expiresAt time.Time
 }
 
@@ -399,7 +400,7 @@ func NewResponseCache(maxSize int, ttl time.Duration) *ResponseCache {
 }
 
 // Get 获取缓存
-func (c *ResponseCache) Get(key string) (*ChatResponse, bool) {
+func (c *ResponseCache) Get(key string) (*openai.ChatCompletionResponse, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
@@ -416,7 +417,7 @@ func (c *ResponseCache) Get(key string) (*ChatResponse, bool) {
 }
 
 // Set 设置缓存
-func (c *ResponseCache) Set(key string, response *ChatResponse) {
+func (c *ResponseCache) Set(key string, response *openai.ChatCompletionResponse) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 

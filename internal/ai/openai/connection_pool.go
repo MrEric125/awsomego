@@ -1,32 +1,14 @@
 package openai
 
 import (
-	"sync"
 	"sync/atomic"
 	"time"
 )
 
-// PooledConnection 连接池中的连接
-type PooledConnection struct {
-	ID         int
-	LastUsed   time.Time
-	Active     bool
-	CreateTime time.Time
-}
-
-// ConnectionPool 连接池
-type ConnectionPool struct {
-	maxSize    int
-	connections map[int]*PooledConnection
-	nextID     int32
-	active     int32
-	mu         sync.RWMutex
-}
-
 // NewConnectionPool 创建连接池
 func NewConnectionPool(maxSize int) *ConnectionPool {
 	pool := &ConnectionPool{
-		maxSize:    maxSize,
+		maxSize:     maxSize,
 		connections: make(map[int]*PooledConnection),
 	}
 
@@ -89,17 +71,17 @@ func (p *ConnectionPool) Stats() PoolStats {
 	defer p.mu.RUnlock()
 
 	return PoolStats{
-		TotalConnections: len(p.connections),
+		TotalConnections:  len(p.connections),
 		ActiveConnections: int(atomic.LoadInt32(&p.active)),
-		MaxSize:          p.maxSize,
+		MaxSize:           p.maxSize,
 	}
 }
 
 // PoolStats 连接池统计
 type PoolStats struct {
-	TotalConnections   int `json:"total_connections"`
-	ActiveConnections  int `json:"active_connections"`
-	MaxSize            int `json:"max_size"`
+	TotalConnections  int `json:"total_connections"`
+	ActiveConnections int `json:"active_connections"`
+	MaxSize           int `json:"max_size"`
 }
 
 // Cleanup 清理空闲连接

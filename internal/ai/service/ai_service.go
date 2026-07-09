@@ -121,13 +121,9 @@ func (s *AIServiceImpl) StreamChat(ctx context.Context, message string) (<-chan 
 				return
 			}
 
+			// 只发送有内容的 chunk，避免空消息阻塞 channel
 			if chunk.Content != "" {
-				ch <- *chunk
-			}
-
-			// 检查是否结束
-			if len(chunk.Content) == 0 {
-				break
+				ch <- *schema.AssistantMessage(chunk.Content, nil)
 			}
 		}
 	}()

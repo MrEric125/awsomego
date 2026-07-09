@@ -75,23 +75,23 @@ type ChatCompletionsRequest struct {
 
 // ChatCompletionsResponse 聊天完成响应
 type ChatCompletionsResponse struct {
-	ID            string                 `json:"id"`
-	Object        string                 `json:"object"`
-	Created       int64                  `json:"created"`
-	Model         string                 `json:"model"`
-	Choices       []ChoiceResponse       `json:"choices"`
-	Usage         *UsageResponse         `json:"usage,omitempty"`
-	SystemFingerprint string              `json:"system_fingerprint,omitempty"`
-	Metadata      map[string]interface{} `json:"metadata,omitempty"`
-	Cached        bool                   `json:"cached"`
-	LatencyMs     int64                  `json:"latency_ms"`
+	ID                string                 `json:"id"`
+	Object            string                 `json:"object"`
+	Created           int64                  `json:"created"`
+	Model             string                 `json:"model"`
+	Choices           []ChoiceResponse       `json:"choices"`
+	Usage             *UsageResponse         `json:"usage,omitempty"`
+	SystemFingerprint string                 `json:"system_fingerprint,omitempty"`
+	Metadata          map[string]interface{} `json:"metadata,omitempty"`
+	Cached            bool                   `json:"cached"`
+	LatencyMs         int64                  `json:"latency_ms"`
 }
 
 // ChoiceResponse 选择响应
 type ChoiceResponse struct {
-	Index        int            `json:"index"`
+	Index        int             `json:"index"`
 	Message      MessageResponse `json:"message"`
-	FinishReason string         `json:"finish_reason"`
+	FinishReason string          `json:"finish_reason"`
 }
 
 // MessageResponse 消息响应
@@ -137,14 +137,14 @@ func (h *EnterpriseAIHandler) ChatCompletions(c *gin.Context) {
 
 	// 构建服务请求
 	svcReq := &service.ChatRequest{
-		Messages:     req.Messages,
-		Model:        req.Model,
-		Temperature:  req.Temperature,
-		MaxTokens:    req.MaxTokens,
-		TopP:         req.TopP,
+		Messages:       req.Messages,
+		Model:          req.Model,
+		Temperature:    req.Temperature,
+		MaxTokens:      req.MaxTokens,
+		TopP:           req.TopP,
 		ResponseFormat: req.ResponseFormat,
-		User:         req.User,
-		UseCache:     req.UseCache,
+		User:           req.User,
+		UseCache:       req.UseCache,
 	}
 
 	// 添加请求上下文
@@ -159,36 +159,7 @@ func (h *EnterpriseAIHandler) ChatCompletions(c *gin.Context) {
 		h.handleError(c, err)
 		return
 	}
-
-	// 构建响应
-	result := ChatCompletionsResponse{
-		ID:      resp.ID,
-		Object:  "chat.completion",
-		Created: resp.Created,
-		Model:   resp.Model,
-		Choices: []ChoiceResponse{
-			{
-				Index: 0,
-				Message: MessageResponse{
-					Role:    "assistant",
-					Content: resp.Content,
-				},
-				FinishReason: resp.FinishReason,
-			},
-		},
-		Cached:    resp.Cached,
-		LatencyMs: resp.LatencyMs,
-	}
-
-	if resp.Usage != nil {
-		result.Usage = &UsageResponse{
-			PromptTokens:     resp.Usage.PromptTokens,
-			CompletionTokens: resp.Usage.CompletionTokens,
-			TotalTokens:      resp.Usage.TotalTokens,
-		}
-	}
-
-	c.JSON(http.StatusOK, result)
+	c.JSON(http.StatusOK, resp)
 }
 
 // ChatCompletionsStream 处理流式聊天完成请求
@@ -207,12 +178,12 @@ func (h *EnterpriseAIHandler) ChatCompletionsStream(c *gin.Context) {
 
 	// 构建服务请求
 	svcReq := &service.ChatRequest{
-		Messages:     req.Messages,
-		Model:        req.Model,
-		Temperature:  req.Temperature,
-		MaxTokens:    req.MaxTokens,
-		TopP:         req.TopP,
-		User:         req.User,
+		Messages:    req.Messages,
+		Model:       req.Model,
+		Temperature: req.Temperature,
+		MaxTokens:   req.MaxTokens,
+		TopP:        req.TopP,
+		User:        req.User,
 	}
 
 	// 添加请求上下文
@@ -279,11 +250,11 @@ type EmbeddingsRequest struct {
 
 // EmbeddingsResponse 嵌入响应
 type EmbeddingsResponse struct {
-	Object  string               `json:"object"`
-	Data    []EmbeddingDataResponse `json:"data"`
-	Model   string               `json:"model"`
-	Usage   *UsageResponse       `json:"usage"`
-	LatencyMs int64              `json:"latency_ms"`
+	Object    string                  `json:"object"`
+	Data      []EmbeddingDataResponse `json:"data"`
+	Model     string                  `json:"model"`
+	Usage     *UsageResponse          `json:"usage"`
+	LatencyMs int64                   `json:"latency_ms"`
 }
 
 // EmbeddingDataResponse 嵌入数据响应
@@ -374,7 +345,7 @@ func (h *EnterpriseAIHandler) OpenAPISpec(c *gin.Context) {
 		"paths": map[string]interface{}{
 			"/chat/completions": map[string]interface{}{
 				"post": map[string]interface{}{
-					"summary": "聊天完成",
+					"summary":     "聊天完成",
 					"description": "创建聊天完成请求，支持多种模型",
 					"requestBody": map[string]interface{}{
 						"required": true,
@@ -402,7 +373,7 @@ func (h *EnterpriseAIHandler) OpenAPISpec(c *gin.Context) {
 			},
 			"/embeddings": map[string]interface{}{
 				"post": map[string]interface{}{
-					"summary": "创建嵌入",
+					"summary":     "创建嵌入",
 					"description": "为文本创建向量嵌入",
 					"requestBody": map[string]interface{}{
 						"required": true,
@@ -425,7 +396,7 @@ func (h *EnterpriseAIHandler) OpenAPISpec(c *gin.Context) {
 		"components": map[string]interface{}{
 			"schemas": map[string]interface{}{
 				"ChatCompletionsRequest": map[string]interface{}{
-					"type": "object",
+					"type":     "object",
 					"required": []string{"model", "messages"},
 					"properties": map[string]interface{}{
 						"model": map[string]string{
@@ -457,7 +428,7 @@ func (h *EnterpriseAIHandler) OpenAPISpec(c *gin.Context) {
 					},
 				},
 				"ChatMessage": map[string]interface{}{
-					"type": "object",
+					"type":     "object",
 					"required": []string{"role", "content"},
 					"properties": map[string]interface{}{
 						"role": map[string]interface{}{

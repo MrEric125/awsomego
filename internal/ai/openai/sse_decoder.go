@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"strings"
-	"time"
 )
 
 // SSEDecoder SSE 解码器
@@ -21,40 +20,48 @@ func NewSSEDecoder(r io.Reader) *SSEDecoder {
 	}
 }
 
-type T struct {
-	Model     string    `json:"model"`
-	CreatedAt time.Time `json:"created_at"`
-	Message   struct {
-		Role    string `json:"role"`
-		Content string `json:"content"`
-	} `json:"message"`
-	Done bool `json:"done"`
-}
-
-func (d *SSEDecoder) DecodeOllamaResp() (*StreamChunk, error) {
-
-	chunk := StreamChunk{}
-
+// DecodeOllamaResp 流式解码 Ollama 响应，逐条发送到 channel
+// 修复：原实现先收集所有 chunk 再返回，导致流式传输退化为阻塞等待全部响应完成
+func (d *SSEDecoder) DecodeOllamaResp(chunkChan chan<- ChatCompletionResponse) error {
 	for {
 		line, err := d.reader.ReadString('\n')
 		if err != nil {
-			return nil, err
+			return err
 		}
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue
 		}
-		var streamResp TrunkItem
 
-		if err := json.Unmarshal([]byte(line), &streamResp); err != nil {
-			return nil, fmt.Errorf("failed to parse SSE data: %w", err)
+		var chunkItem TrunkItem
+
+		if err := json.Unmarshal([]byte(line), &chunkItem); err != nil {
+			return fmt.Errorf("failed to parse SSE data: %w", err)
 		}
-		chunk.Choices = append(chunk.Choices, streamResp)
-		if streamResp.Done {
-			return &chunk, nil
+		chunk := ChatCompletionResponse{
+			Choices: []ChatChoice{
+				{
+					Index:        0,
+					Delta:        &chunkItem.Message,
+					FinishReason: chunkItem.DoneReason,
+					Finished:     chunkItem.Done,
+				},
+			},
+			Model:   chunkItem.Model,
+			Created: chunkItem.CreatedAt.Unix(),
+			Usage: Usage{
+				PromptTokens:     0,
+				CompletionTokens: 0,
+				TotalTokens:      0,
+			},
+		}
+
+		chunkChan <- chunk
+		if chunkItem.Done {
+			break
 		}
 	}
-
+	return nil
 }
 
 // Decode 解码下一个事件

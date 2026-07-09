@@ -1,11 +1,10 @@
 package openai
 
 import (
-	"context"
-	"fmt"
-
 	"awesome/internal/ai/config"
 	"awesome/internal/ai/openai/ratelimit"
+	"context"
+	"fmt"
 
 	"github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino/schema"
@@ -85,7 +84,7 @@ func (a *ChatModelAdapter) Generate(ctx context.Context, messages []*schema.Mess
 	// 转换响应
 	return &schema.Message{
 		Role:    schema.Assistant,
-		Content: resp.Message.Content,
+		Content: resp.Choices[0].Message.Content,
 	}, nil
 }
 
@@ -146,16 +145,8 @@ func (a *ChatModelAdapter) Stream(ctx context.Context, messages []*schema.Messag
 				fmt.Println("DEBUG: chunk error:", chunk.Error) // 发送错误并关闭
 			}
 
-			for _, choice := range chunk.Choices {
-				if choice.Message.Content != "" {
-					msg := &schema.Message{
-						Role:    schema.Assistant,
-						Content: choice.Message.Content,
-					}
-					if sw.Send(msg, nil) {
-						//return
-					}
-				}
+			if sw.Send(&schema.Message{Content: chunk.Choices[0].Delta.Content}, nil) {
+
 			}
 		}
 	}()
