@@ -13,6 +13,13 @@ import (
 
 var DB *gorm.DB
 
+// InitDatabase 初始化数据库（连接 + 迁移）
+func InitDatabase() *gorm.DB {
+	db := NewGormDB()
+	// AutoMigrate(db)
+	return db
+}
+
 // NewGormDB 创建 GORM 数据库连接池
 func NewGormDB() *gorm.DB {
 	dsn := os.Getenv("DATABASE_DSN") // 从环境变量获取，例如: user:pass@tcp(127.0.0.1:3306)/dbname?charset=utf8mb4&parseTime=True&loc=Local
