@@ -1,2 +1,83 @@
-.idea/
+```
+# Go build artifacts
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+
+# Go test coverage
+coverage.out
+coverprofile
+
+# Go modules cache (if needed locally)
+.gocache/
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*~
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+.env.local
+*.env.*
+
+# IDE specific
 .vscode/
+.idea/
+*.swp
+*.swo
+
+# Build directories (if present)
+bin/
+dist/
+target/
+_build/
+
+# Coverage reports
+coverage/
+htmlcov/
+.coverage
+
+# Test artifacts
+*.test
+*_testmain.go
+
+# Dependency caches
+vendor/
+_deps/
+
+# MyPy cache (Python projects sometimes mixed)
+.mypy_cache/
+.pytest_cache/
+__pycache__/
+*.pyc
+
+# Node.js (Go projects sometimes have frontend)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Gradle
+.gradle/
+build/
+
+# Maven
+target/
+
+# Compression files
+*.zip
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.gz
+*.rar
+*.7z
+```

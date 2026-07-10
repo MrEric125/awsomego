@@ -1,6 +1,6 @@
 module awesome
 
-go 1.24.2
+go 1.23
 
 require (
 	github.com/cloudwego/eino v0.8.13
