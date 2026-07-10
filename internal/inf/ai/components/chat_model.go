@@ -1,10 +1,12 @@
 package components
 
 import (
+	"awesome/internal/inf/ai/adapter"
 	"awesome/internal/inf/ai/config"
 	openai2 "awesome/internal/inf/ai/openai"
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/cloudwego/eino-ext/components/model/ark"
@@ -15,14 +17,16 @@ import (
 type ProviderType string
 
 const (
-	ProviderArk    ProviderType = "ark"
-	ProviderOpenAI ProviderType = "openai"
+	ProviderArk      ProviderType = "ark"
+	ProviderOpenAI   ProviderType = "openai"
+	ProviderOllama   ProviderType = "ollama"
+	ProviderDeepSeek ProviderType = "deepseek"
 )
 
 // ChatModelProvider 聊天模型提供者
 type ChatModelProvider struct {
 	config          *config.AIConfig
-	openaiAdapter   *openai2.ChatModelAdapter
+	openaiAdapter   *adapter.ChatModelAdapter
 	arkModel        model.ChatModel
 	mu              sync.RWMutex
 	defaultProvider ProviderType
@@ -46,18 +50,14 @@ func (p *ChatModelProvider) GetArkChatModel() (model.ChatModel, error) {
 		return p.arkModel, nil
 	}
 
-	if p.config.ArkAPIKey == "" {
-		return nil, fmt.Errorf("ARK_API_KEY is not set")
-	}
-
 	temperature := float32(p.config.Temperature)
 	topP := float32(p.config.TopP)
 	maxTokens := p.config.MaxTokens
 
 	chatModel, err := ark.NewChatModel(context.Background(), &ark.ChatModelConfig{
-		Model:       p.config.ArkModelName,
-		APIKey:      p.config.ArkAPIKey,
-		BaseURL:     p.config.ArkBaseURL,
+		Model:       p.config.OpenAIModelName,
+		APIKey:      p.config.OpenAIAPIKey,
+		BaseURL:     p.config.OpenAIBaseURL,
 		Temperature: &temperature,
 		TopP:        &topP,
 		MaxTokens:   &maxTokens,
@@ -81,11 +81,7 @@ func (p *ChatModelProvider) GetOpenAIChatModel() (model.ChatModel, error) {
 		return p.openaiAdapter, nil
 	}
 
-	//if p.config.OpenAIAPIKey == "" {
-	//	return nil, fmt.Errorf("OPENAI_API_KEY is not set")
-	//}
-
-	adapter, err := openai2.NewChatModelAdapter(p.config)
+	adapter, err := adapter.NewChatModelAdapter(p.config, "openai")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create OpenAI adapter: %w", err)
 	}
@@ -94,34 +90,84 @@ func (p *ChatModelProvider) GetOpenAIChatModel() (model.ChatModel, error) {
 	return adapter, nil
 }
 
+func (p *ChatModelProvider) GetOllamaChatModel() (model.ChatModel, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if p.openaiAdapter != nil && strings.ToLower(p.openaiAdapter.Provider()) == "ollama" {
+		return p.openaiAdapter, nil
+	}
+
+	adapter, err := adapter.NewChatModelAdapter(p.config, "ollama")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Ollama adapter: %w", err)
+	}
+
+	p.openaiAdapter = adapter
+	return adapter, nil
+}
+
+func (p *ChatModelProvider) GetDeepSeekChatModel() (model.ChatModel, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if p.openaiAdapter != nil && strings.ToLower(p.openaiAdapter.Provider()) == "deepseek" {
+		return p.openaiAdapter, nil
+	}
+
+	adapter, err := adapter.NewChatModelAdapter(p.config, "deepseek")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create DeepSeek adapter: %w", err)
+	}
+
+	p.openaiAdapter = adapter
+	return adapter, nil
+}
+
 // GetChatModel 获取指定类型的聊天模型
-func (p *ChatModelProvider) GetChatModel(providerType ProviderType) (model.ChatModel, error) {
-	switch providerType {
-	case ProviderArk:
+func (p *ChatModelProvider) GetChatModel(provider string) (model.ChatModel, error) {
+	switch strings.ToLower(strings.TrimSpace(provider)) {
+	case "", "default":
+		return p.GetDefaultChatModel()
+	case "ark":
 		return p.GetArkChatModel()
-	case ProviderOpenAI:
+	case "openai":
 		return p.GetOpenAIChatModel()
+	case "ollama":
+		return p.GetOllamaChatModel()
+	case "deepseek":
+		return p.GetDeepSeekChatModel()
 	default:
-		return nil, fmt.Errorf("unknown provider type: %s", providerType)
+		return nil, fmt.Errorf("unknown provider type: %s", provider)
 	}
 }
 
 // GetDefaultChatModel 获取默认聊天模型
 func (p *ChatModelProvider) GetDefaultChatModel() (model.ChatModel, error) {
-	// 根据配置选择默认提供者
-	if p.config.ModelType == "ark" {
+	providerType := strings.ToLower(strings.TrimSpace(p.config.ModelType))
+
+	switch providerType {
+	case "ark":
 		return p.GetArkChatModel()
+	case "openai":
+		return p.GetOpenAIChatModel()
+	case "ollama":
+		return p.GetOllamaChatModel()
+	case "deepseek":
+		return p.GetDeepSeekChatModel()
 	}
 
-	if p.config.ModelType == "openai" {
+	// 逐个尝试可用提供者
+	if p.config.OpenAIAPIKey != "" && p.config.OpenAIBaseURL != "" {
 		return p.GetOpenAIChatModel()
 	}
-	if p.config.ModelType == "ollama" {
-		return p.getOllamaChatModel()
-
+	if p.config.OllamaBaseURL != "" {
+		return p.GetOllamaChatModel()
 	}
-
-	return nil, fmt.Errorf("no available chat model provider")
+	if p.config.DeepSeekAPIKey != "" && p.config.DeepSeekURL != "" {
+		return p.GetDeepSeekChatModel()
+	}
+	return p.GetArkChatModel()
 }
 
 // SetDefaultProvider 设置默认提供者
@@ -163,19 +209,5 @@ func (p *ChatModelProvider) Close() error {
 }
 
 func (p *ChatModelProvider) getOllamaChatModel() (model.ChatModel, error) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	// 如果已创建，直接返回
-	if p.openaiAdapter != nil {
-		return p.openaiAdapter, nil
-	}
-
-	adapter, err := openai2.NewChatModelAdapter(p.config)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create OpenAI adapter: %w", err)
-	}
-
-	p.openaiAdapter = adapter
-	return adapter, nil
+	return p.GetOllamaChatModel()
 }

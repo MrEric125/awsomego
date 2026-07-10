@@ -14,16 +14,13 @@ import (
 // AIService AI 服务接口
 type AIService interface {
 	// Chat 简单对话
-	Chat(ctx context.Context, message string) (string, error)
+	Chat(ctx context.Context, message, provider, model string) (string, error)
 
 	// ChatWithHistory 带历史记录的对话
-	ChatWithHistory(ctx context.Context, messages []Message) (string, error)
+	ChatWithHistory(ctx context.Context, messages []Message, provider, model string) (string, error)
 
 	// StreamChat 流式对话（返回 channel）
-	StreamChat(ctx context.Context, message string) (<-chan schema.Message, error)
-
-	// Summarize 文本摘要
-	Summarize(ctx context.Context, text string) (string, error)
+	StreamChat(ctx context.Context, message, provider, model string) (<-chan schema.Message, error)
 
 	// Translate 翻译
 	Translate(ctx context.Context, text, targetLang string) (string, error)
@@ -37,30 +34,24 @@ type Message struct {
 
 // AIServiceImpl AI 服务实现
 type AIServiceImpl struct {
-	//eino 使用的模型
-	chatModel model.BaseChatModel
+	provider *components.ChatModelProvider
 }
 
 // NewAIService 创建 AI 服务
 func NewAIService(provider *components.ChatModelProvider) (AIService, error) {
-	chatModel, err := provider.GetDefaultChatModel()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get chat model: %w", err)
-	}
-
 	return &AIServiceImpl{
-		chatModel: chatModel,
+		provider: provider,
 	}, nil
 }
 
 // Chat 简单对话
-func (s *AIServiceImpl) Chat(ctx context.Context, message string) (string, error) {
+func (s *AIServiceImpl) Chat(ctx context.Context, message, provider, model string) (string, error) {
 	messages := []*schema.Message{
 		schema.SystemMessage("你是一个有用的AI助手。"),
 		schema.UserMessage(message),
 	}
 
-	resp, err := s.chatModel.Generate(ctx, messages)
+	resp, err := s.generateWithModel(ctx, messages, provider, model)
 	if err != nil {
 		return "", fmt.Errorf("chat generation failed: %w", err)
 	}
@@ -69,7 +60,7 @@ func (s *AIServiceImpl) Chat(ctx context.Context, message string) (string, error
 }
 
 // ChatWithHistory 带历史记录的对话
-func (s *AIServiceImpl) ChatWithHistory(ctx context.Context, messages []Message) (string, error) {
+func (s *AIServiceImpl) ChatWithHistory(ctx context.Context, messages []Message, provider, model string) (string, error) {
 	var schemaMessages []*schema.Message
 
 	for _, msg := range messages {
@@ -85,7 +76,7 @@ func (s *AIServiceImpl) ChatWithHistory(ctx context.Context, messages []Message)
 		}
 	}
 
-	resp, err := s.chatModel.Generate(ctx, schemaMessages)
+	resp, err := s.generateWithModel(ctx, schemaMessages, provider, model)
 	if err != nil {
 		return "", fmt.Errorf("chat with history failed: %w", err)
 	}
@@ -94,13 +85,13 @@ func (s *AIServiceImpl) ChatWithHistory(ctx context.Context, messages []Message)
 }
 
 // StreamChat 流式对话
-func (s *AIServiceImpl) StreamChat(ctx context.Context, message string) (<-chan schema.Message, error) {
+func (s *AIServiceImpl) StreamChat(ctx context.Context, message, provider, model string) (<-chan schema.Message, error) {
 	messages := []*schema.Message{
 		schema.SystemMessage("你是一个有用的AI助手。"),
 		schema.UserMessage(message),
 	}
 
-	stream, err := s.chatModel.Stream(ctx, messages)
+	stream, err := s.streamWithModel(ctx, messages, provider, model)
 	if err != nil {
 		return nil, fmt.Errorf("stream chat failed: %w", err)
 	}
@@ -139,7 +130,7 @@ func (s *AIServiceImpl) Summarize(ctx context.Context, text string) (string, err
 		schema.UserMessage(prompt),
 	}
 
-	resp, err := s.chatModel.Generate(ctx, messages)
+	resp, err := s.generateWithModel(ctx, messages, "", "")
 	if err != nil {
 		return "", fmt.Errorf("summarization failed: %w", err)
 	}
@@ -156,10 +147,38 @@ func (s *AIServiceImpl) Translate(ctx context.Context, text, targetLang string) 
 		schema.UserMessage(prompt),
 	}
 
-	resp, err := s.chatModel.Generate(ctx, messages)
+	resp, err := s.generateWithModel(ctx, messages, "", "")
 	if err != nil {
 		return "", fmt.Errorf("translation failed: %w", err)
 	}
 
 	return resp.Content, nil
+}
+
+func (s *AIServiceImpl) generateWithModel(ctx context.Context, messages []*schema.Message, provider, modelName string) (*schema.Message, error) {
+	chatModel, err := s.provider.GetChatModel(provider)
+	if err != nil {
+		return nil, err
+	}
+
+	opts := []model.Option{}
+	if strings.TrimSpace(modelName) != "" {
+		opts = append(opts, model.WithModel(modelName))
+	}
+
+	return chatModel.Generate(ctx, messages, opts...)
+}
+
+func (s *AIServiceImpl) streamWithModel(ctx context.Context, messages []*schema.Message, provider, modelName string) (*schema.StreamReader[*schema.Message], error) {
+	chatModel, err := s.provider.GetChatModel(provider)
+	if err != nil {
+		return nil, err
+	}
+
+	opts := []model.Option{}
+	if strings.TrimSpace(modelName) != "" {
+		opts = append(opts, model.WithModel(modelName))
+	}
+
+	return chatModel.Stream(ctx, messages, opts...)
 }

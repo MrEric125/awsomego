@@ -23,8 +23,10 @@ type SummarizeResponse struct {
 
 // ChatRequest 对话请求
 type ChatRequest struct {
-	Message string    `json:"message" binding:"required"`
-	History []Message `json:"history,omitempty"`
+	Message  string    `json:"message" binding:"required"`
+	History  []Message `json:"history,omitempty"`
+	Provider string    `json:"provider,omitempty"`
+	Model    string    `json:"model,omitempty"`
 }
 
 // Message 消息结构

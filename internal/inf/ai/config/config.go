@@ -7,16 +7,21 @@ import (
 
 // AIConfig AI 服务配置
 type AIConfig struct {
-	// 豆包 Ark 配置
-	ArkAPIKey    string
-	ArkModelName string
-	ArkBaseURL   string
 
 	// OpenAI 配置（可选）
 	OpenAIAPIKey    string
 	OpenAIModelName string
 	OpenAIBaseURL   string
 	ModelType       string
+
+	// Ollama 配置（可选）
+	OllamaBaseURL string
+	OllamaModel   string
+
+	// DeepSeek 配置（兼容 OpenAI API）
+	DeepSeekAPIKey string
+	DeepSeekModel  string
+	DeepSeekURL    string
 
 	// 通用配置
 	Timeout     int // 超时时间（秒）
@@ -29,16 +34,20 @@ type AIConfig struct {
 // LoadAIConfig 从环境变量加载 AI 配置
 func LoadAIConfig() *AIConfig {
 	return &AIConfig{
-		// 豆包 Ark 配置
-		ArkAPIKey:    getEnv("ARK_API_KEY", ""),
-		ArkModelName: getEnv("ARK_MODEL_NAME", ""),
-		ArkBaseURL:   getEnv("ARK_BASE_URL", ""),
-
 		// OpenAI 配置
 		OpenAIAPIKey:    getEnv("OPENAI_API_KEY", ""),
 		OpenAIModelName: getEnv("OPENAI_MODEL_NAME", ""),
-		OpenAIBaseURL:   getEnv("OPENAI_BASE_URL", ""),
+		OpenAIBaseURL:   getEnv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
 		ModelType:       getEnv("MODEL_TYPE", ""),
+
+		// Ollama 配置
+		OllamaBaseURL: getEnv("OLLAMA_BASE_URL", ""),
+		OllamaModel:   getEnv("OLLAMA_MODEL", ""),
+
+		// DeepSeek 配置
+		DeepSeekAPIKey: getEnv("DEEPSEEK_API_KEY", ""),
+		DeepSeekModel:  getEnv("DEEPSEEK_MODEL", "deepseek-chat"),
+		DeepSeekURL:    getEnv("DEEPSEEK_URL", "https://api.deepseek.com/v1"),
 
 		// 通用配置
 		Timeout:     getIntEnv("AI_TIMEOUT", 30),

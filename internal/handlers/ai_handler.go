@@ -63,9 +63,9 @@ func (h *AIHandler) Chat(c *gin.Context) {
 			Role:    "user",
 			Content: req.Message,
 		})
-		reply, err = h.aiService.ChatWithHistory(ctx, messages)
+		reply, err = h.aiService.ChatWithHistory(ctx, messages, req.Provider, req.Model)
 	} else {
-		reply, err = h.aiService.Chat(ctx, req.Message)
+		reply, err = h.aiService.Chat(ctx, req.Message, req.Provider, req.Model)
 	}
 
 	if err != nil {
@@ -94,7 +94,7 @@ func (h *AIHandler) StreamChat(c *gin.Context) {
 
 	ctx := c.Request.Context()
 
-	stream, err := h.aiService.StreamChat(ctx, req.Message)
+	stream, err := h.aiService.StreamChat(ctx, req.Message, req.Provider, req.Model)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Stream chat failed: " + err.Error(),
