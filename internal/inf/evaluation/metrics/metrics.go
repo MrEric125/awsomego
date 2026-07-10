@@ -96,7 +96,11 @@ func (mc *MetricsCalculator) toBool(v interface{}) bool {
 	switch val := v.(type) {
 	case bool:
 		return val
-	case int, int32, int64:
+	case int:
+		return val != 0
+	case int32:
+		return val != 0
+	case int64:
 		return val != 0
 	case float32, float64:
 		return val != 0
