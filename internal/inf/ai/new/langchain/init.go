@@ -1,7 +1,6 @@
 package langchain
 
 import (
-	"awesome/internal/handlers"
 	"awesome/internal/inf/ai/new/langchain/components"
 	lcconfig "awesome/internal/inf/ai/new/langchain/config"
 	"awesome/internal/inf/ai/new/langchain/service"
@@ -30,13 +29,13 @@ func Init() {
 		panic(err)
 	}
 
-	// 4. 注册 LangChainHandler
-	if err := internaldig.Provide(func(lcService service.LangChainService) *handlers.LangChainHandler {
-		return handlers.NewLangChainHandler(lcService)
-	}); err != nil {
-		fmt.Println("Error providing LangChainHandler:", err)
-		panic(err)
-	}
+	//// 4. 注册 LangChainHandler
+	//if err := internaldig.Provide(func(lcService service.LangChainService) *handlers.LangChainHandler {
+	//	return handlers.NewLangChainHandler(lcService)
+	//}); err != nil {
+	//	fmt.Println("Error providing LangChainHandler:", err)
+	//	panic(err)
+	//}
 
 	fmt.Println("LangChain module initialized successfully")
 }

@@ -4,6 +4,7 @@ import (
 	"awesome/internal/inf/ai/new/adapter"
 	"awesome/internal/inf/ai/new/config"
 	"awesome/internal/inf/ai/new/model"
+	"awesome/internal/inf/logger"
 	"context"
 	"fmt"
 	"time"
@@ -15,7 +16,6 @@ import (
 type ChatService struct {
 	factory *adapter.AdapterFactory
 	config  *config.Config
-	logger  *zap.Logger
 }
 
 func NewChatService(cfg config.Config) (*ChatService, error) {
@@ -43,7 +43,7 @@ func NewChatService(cfg config.Config) (*ChatService, error) {
 
 func (s *ChatService) Chat(ctx context.Context, req *model.ChatRequest) (*model.ChatResponse, error) {
 	startTime := time.Now()
-	s.logger.Info("processing chat request",
+	logger.Logger.Info("processing chat request",
 		zap.String("model", req.Model),
 		zap.Int("messages_count", len(req.Messages)),
 		zap.Bool("stream", req.Stream))
@@ -79,7 +79,7 @@ func (s *ChatService) Chat(ctx context.Context, req *model.ChatRequest) (*model.
 	// 调用模型
 	response, err := chatAdapter.Chat(ctx, messages, options)
 	if err != nil {
-		s.logger.Error("chat failed",
+		logger.Logger.Error("chat failed",
 			zap.String("model", req.Model),
 			zap.Error(err),
 			zap.Duration("duration", time.Since(startTime)))
@@ -88,7 +88,7 @@ func (s *ChatService) Chat(ctx context.Context, req *model.ChatRequest) (*model.
 
 	response.Timestamp = time.Now()
 
-	s.logger.Info("chat completed",
+	logger.Logger.Info("chat completed",
 		zap.String("model", req.Model),
 		zap.Duration("duration", time.Since(startTime)))
 
@@ -96,7 +96,7 @@ func (s *ChatService) Chat(ctx context.Context, req *model.ChatRequest) (*model.
 }
 
 func (s *ChatService) ChatStream(ctx context.Context, req *model.ChatRequest) (*schema.StreamReader[*schema.Message], error) {
-	s.logger.Info("processing stream chat request",
+	logger.Logger.Info("processing stream chat request",
 		zap.String("model", req.Model),
 		zap.Int("messages_count", len(req.Messages)))
 
@@ -116,22 +116,10 @@ func (s *ChatService) ChatStream(ctx context.Context, req *model.ChatRequest) (*
 		TopP:        req.TopP,
 	}
 
-	// 设置超时
-	timeout := s.config.Timeout.Default
-	if req.Timeout > 0 {
-		timeout = time.Duration(req.Timeout) * time.Second
-		if timeout > s.config.Timeout.Max {
-			timeout = s.config.Timeout.Max
-		}
-	}
-
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
-
 	// 调用流式模型
 	streamChan, err := chatAdapter.ChatStream(ctx, messages, options)
 	if err != nil {
-		s.logger.Error("stream chat failed",
+		logger.Logger.Error("stream chat failed",
 			zap.String("model", req.Model),
 			zap.Error(err))
 		return nil, fmt.Errorf("stream chat failed: %w", err)

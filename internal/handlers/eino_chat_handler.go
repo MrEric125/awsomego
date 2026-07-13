@@ -1,8 +1,9 @@
-package new
+package handlers
 
 import (
 	"awesome/internal/inf/ai/new/model"
 	"awesome/internal/inf/ai/new/service"
+	"awesome/internal/inf/logger"
 	"awesome/internal/response"
 	"encoding/json"
 	"fmt"
@@ -16,7 +17,7 @@ import (
 
 type ChatHandler struct {
 	service *service.ChatService
-	logger  *zap.Logger
+	//logger  *zap.Logger
 }
 
 func NewChatHandler(service *service.ChatService) *ChatHandler {
@@ -40,21 +41,21 @@ func (h *ChatHandler) RegisterRoutes(r *gin.RouterGroup) {
 func (h *ChatHandler) ChatCompletion(c *gin.Context) {
 	var req model.ChatRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		h.logger.Error("invalid request", zap.Error(err))
+		logger.Logger.Error("invalid request", zap.Error(err))
 		response.Error(c, http.StatusBadRequest, "invalid request: "+err.Error())
 		return
 	}
 
 	// 检查是否为流式请求
 	if req.Stream {
-		h.ChatCompletionStream(c)
+		h.handleStream(c, &req)
 		return
 	}
 
 	// 调用服务层
 	chatResponse, err := h.service.Chat(c.Request.Context(), &req)
 	if err != nil {
-		h.logger.Error("chat completion failed", zap.Error(err))
+		logger.Logger.Error("chat completion failed", zap.Error(err))
 		response.Error(c, http.StatusInternalServerError, "chat failed: "+err.Error())
 		return
 	}
@@ -66,11 +67,15 @@ func (h *ChatHandler) ChatCompletion(c *gin.Context) {
 func (h *ChatHandler) ChatCompletionStream(c *gin.Context) {
 	var req model.ChatRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		h.logger.Error("invalid stream request", zap.Error(err))
+		logger.Logger.Error("invalid stream request", zap.Error(err))
 		response.Error(c, http.StatusBadRequest, "invalid request: "+err.Error())
 		return
 	}
+	h.handleStream(c, &req)
+}
 
+// handleStream 处理流式响应（内部方法，避免重复读取请求体）
+func (h *ChatHandler) handleStream(c *gin.Context, req *model.ChatRequest) {
 	// 设置SSE头
 	c.Header("Content-Type", "text/event-stream")
 	c.Header("Cache-Control", "no-cache")
@@ -78,62 +83,45 @@ func (h *ChatHandler) ChatCompletionStream(c *gin.Context) {
 	c.Header("X-Accel-Buffering", "no")
 
 	// 调用流式服务
-	streamChan, err := h.service.ChatStream(c.Request.Context(), &req)
+	streamChan, err := h.service.ChatStream(c.Request.Context(), req)
 	if err != nil {
-		h.logger.Error("stream chat failed", zap.Error(err))
+		logger.Logger.Error("stream chat failed", zap.Error(err))
 		h.sendSSEError(c, err.Error())
 		return
 	}
 
 	c.Stream(func(w io.Writer) bool {
-		//select {
-		//
-		//case streamReader, ok := <-streamChan.:
-		//	if !ok {
-		//		// 流结束
-		//		h.sendSSEDone(c)
-		//		return false
-		//	}
-		//
-		//
-		//
-		//case <-c.Request.Context().Done():
-		//	return false
-		//}
-		// 读取流数据
-		for {
-			msg, err := streamChan.Recv()
-			if err == io.EOF {
-				h.sendSSEDone(c)
-				return false
-			}
-			if err != nil {
-				h.logger.Error("stream read error", zap.Error(err))
-				h.sendSSEError(c, err.Error())
-				return false
-			}
+		msg, err := streamChan.Recv()
+		if err == io.EOF {
+			h.sendSSEDone(c)
+			return false
+		}
+		if err != nil {
+			logger.Logger.Error("stream read error", zap.Error(err))
+			h.sendSSEError(c, err.Error())
+			return false
+		}
 
-			// 构造SSE事件
-			event := model.StreamEvent{
-				ID:      fmt.Sprintf("chatcmpl-%d", time.Now().UnixNano()),
-				Object:  "chat.completion.chunk",
-				Created: time.Now().Unix(),
-				Model:   req.Model,
-				Choices: []model.Choice{
-					{
-						Index: 0,
-						Delta: model.Message{
-							Role:    string(msg.Role),
-							Content: msg.Content,
-						},
+		// 构造SSE事件
+		event := model.StreamEvent{
+			ID:      fmt.Sprintf("chatcmpl-%d", time.Now().UnixNano()),
+			Object:  "chat.completion.chunk",
+			Created: time.Now().Unix(),
+			Model:   req.Model,
+			Choices: []model.Choice{
+				{
+					Index: 0,
+					Delta: model.Message{
+						Role:    string(msg.Role),
+						Content: msg.Content,
 					},
 				},
-			}
-
-			data, _ := json.Marshal(event)
-			c.SSEvent("message", string(data))
-			return true
+			},
 		}
+
+		data, _ := json.Marshal(event)
+		c.SSEvent("message", string(data))
+		return true
 	})
 }
 

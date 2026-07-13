@@ -54,7 +54,7 @@ func NewChatAdapter(config config.ModelConfig) (chatAdapter ChatAdapter, err err
 
 	}
 	if err != nil {
-		return nil, fmt.Errorf("failed to create Ollama chat model: %w", err)
+		return nil, fmt.Errorf("failed to create %s chat model: %w", config.Type, err)
 	}
 	limiter := ratelimit.NewTokenBucketLimiter(10, 20)
 

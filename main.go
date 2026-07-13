@@ -1,8 +1,9 @@
 package main
 
 import (
-	"awesome/internal"
 	"awesome/internal/api"
+	_ "awesome/internal/inf/init"
+	"awesome/internal/inf/logger"
 	"fmt"
 	"github.com/joho/godotenv"
 	"log"
@@ -16,10 +17,11 @@ func main() {
 	if err := godotenv.Load(); err != nil {
 		log.Fatal("Error loading .env file")
 	}
-	internal.Init()
 
 	// 创建 Gin 引擎
 	r := gin.Default()
+
+	logger.Init()
 
 	api.Init(r)
 	// 启动服务器
