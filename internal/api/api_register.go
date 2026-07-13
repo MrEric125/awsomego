@@ -2,17 +2,19 @@ package api
 
 import (
 	"awesome/internal/handlers"
+	new2 "awesome/internal/inf/ai/new"
 	ragroutes "awesome/internal/inf/ai/rag/routes"
 	"awesome/internaldig"
 	"fmt"
 	"github.com/gin-gonic/gin"
+
 	"log"
 )
 
 func Init(r *gin.Engine) {
 
 	// 获取 AIHandler
-	aiHandler, err := internaldig.Get[*handlers.AIHandler]()
+	aiHandler, err := internaldig.Get[*new2.ChatHandler]()
 	if err != nil {
 		log.Printf("Warning: failed to get AIHandler: %v", err)
 	}

@@ -1,7 +1,7 @@
 package service
 
 import (
-	"awesome/internal/inf/langchain/components"
+	"awesome/internal/inf/ai/new/langchain/components"
 	"context"
 	"fmt"
 	"strings"

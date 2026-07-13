@@ -2,7 +2,6 @@ package main
 
 import (
 	"awesome/internal"
-	_ "awesome/internal"
 	"awesome/internal/api"
 	"fmt"
 	"github.com/joho/godotenv"

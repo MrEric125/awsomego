@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"awesome/internal/inf/langchain/service"
+	"awesome/internal/inf/ai/new/langchain/service"
 	"net/http"
 	"time"
 

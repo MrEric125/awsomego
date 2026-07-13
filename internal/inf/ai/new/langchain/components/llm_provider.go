@@ -1,7 +1,7 @@
 package components
 
 import (
-	"awesome/internal/inf/langchain/config"
+	"awesome/internal/inf/ai/new/langchain/config"
 	"context"
 	"fmt"
 

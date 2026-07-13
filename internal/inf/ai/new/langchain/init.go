@@ -2,9 +2,9 @@ package langchain
 
 import (
 	"awesome/internal/handlers"
-	"awesome/internal/inf/langchain/components"
-	lcconfig "awesome/internal/inf/langchain/config"
-	"awesome/internal/inf/langchain/service"
+	"awesome/internal/inf/ai/new/langchain/components"
+	lcconfig "awesome/internal/inf/ai/new/langchain/config"
+	"awesome/internal/inf/ai/new/langchain/service"
 	"awesome/internaldig"
 	"fmt"
 )

@@ -3,7 +3,7 @@ package internal
 import (
 	"awesome/internal/database"
 	"awesome/internal/inf/ai"
-	"awesome/internal/inf/langchain"
+	"awesome/internal/inf/ai/new/langchain"
 )
 
 func Init() {

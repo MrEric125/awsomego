@@ -14,15 +14,6 @@ type AIConfig struct {
 	OpenAIBaseURL   string
 	ModelType       string
 
-	// Ollama 配置（可选）
-	OllamaBaseURL string
-	OllamaModel   string
-
-	// DeepSeek 配置（兼容 OpenAI API）
-	DeepSeekAPIKey string
-	DeepSeekModel  string
-	DeepSeekURL    string
-
 	// 通用配置
 	Timeout     int // 超时时间（秒）
 	MaxRetries  int // 最大重试次数
@@ -39,15 +30,6 @@ func LoadAIConfig() *AIConfig {
 		OpenAIModelName: getEnv("OPENAI_MODEL_NAME", ""),
 		OpenAIBaseURL:   getEnv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
 		ModelType:       getEnv("MODEL_TYPE", ""),
-
-		// Ollama 配置
-		OllamaBaseURL: getEnv("OLLAMA_BASE_URL", ""),
-		OllamaModel:   getEnv("OLLAMA_MODEL", ""),
-
-		// DeepSeek 配置
-		DeepSeekAPIKey: getEnv("DEEPSEEK_API_KEY", ""),
-		DeepSeekModel:  getEnv("DEEPSEEK_MODEL", "deepseek-chat"),
-		DeepSeekURL:    getEnv("DEEPSEEK_URL", "https://api.deepseek.com/v1"),
 
 		// 通用配置
 		Timeout:     getIntEnv("AI_TIMEOUT", 30),

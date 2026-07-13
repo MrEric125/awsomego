@@ -1,4 +1,4 @@
-package openai
+package model
 
 import (
 	"sync/atomic"
@@ -7,6 +7,15 @@ import (
 
 // CircuitState 熔断器状态
 type CircuitState int32
+
+const (
+	// StateClosed 关闭状态（正常）
+	StateClosed CircuitState = iota
+	// StateOpen 开启状态（熔断）
+	StateOpen
+	// StateHalfOpen 半开状态（尝试恢复）
+	StateHalfOpen
+)
 
 // NewCircuitBreaker 创建熔断器
 func NewCircuitBreaker(failureThreshold int, resetTimeout time.Duration) *CircuitBreaker {
