@@ -6,7 +6,9 @@ import (
 	"awesome/internal/inf/ai/new/model"
 	"awesome/internal/inf/logger"
 	"context"
+	"encoding/json"
 	"fmt"
+	"github.com/eino-contrib/jsonschema"
 	"time"
 
 	"github.com/cloudwego/eino/schema"
@@ -62,6 +64,8 @@ func (s *ChatService) Chat(ctx context.Context, req *model.ChatRequest) (*model.
 		Temperature: req.Temperature,
 		MaxTokens:   req.MaxTokens,
 		TopP:        req.TopP,
+		Thinking:    req.Thinking,
+		Tools:       s.convertTools(req.Tools),
 	}
 
 	// 设置超时
@@ -114,6 +118,8 @@ func (s *ChatService) ChatStream(ctx context.Context, req *model.ChatRequest) (*
 		Temperature: req.Temperature,
 		MaxTokens:   req.MaxTokens,
 		TopP:        req.TopP,
+		Thinking:    req.Thinking,
+		Tools:       s.convertTools(req.Tools),
 	}
 
 	// 调用流式模型
@@ -135,10 +141,45 @@ func (s *ChatService) ListModels() []string {
 func (s *ChatService) convertMessages(messages []model.Message) []*schema.Message {
 	result := make([]*schema.Message, len(messages))
 	for i, msg := range messages {
-		result[i] = &schema.Message{
+		m := &schema.Message{
 			Role:    schema.RoleType(msg.Role),
 			Content: msg.Content,
 		}
+		// 处理 tool 角色的消息
+		if msg.Role == "tool" {
+			m.ToolCallID = msg.ToolCallID
+			m.ToolName = msg.Name
+		}
+		result[i] = m
+	}
+	return result
+}
+
+// convertTools 将 API 请求中的工具定义转换为 eino 的 schema.ToolInfo
+func (s *ChatService) convertTools(tools []model.ToolDefinition) []*schema.ToolInfo {
+	if len(tools) == 0 {
+		return nil
+	}
+
+	result := make([]*schema.ToolInfo, 0, len(tools))
+	for _, t := range tools {
+		toolInfo := &schema.ToolInfo{
+			Name: t.Function.Name,
+			Desc: t.Function.Description,
+		}
+
+		// 将 JSON Schema 格式的参数转换为 eino 的 ParamsOneOf
+		if t.Function.Parameters != nil {
+			paramsJSON, err := json.Marshal(t.Function.Parameters)
+			if err == nil {
+				js := &jsonschema.Schema{}
+				if err := json.Unmarshal(paramsJSON, js); err == nil {
+					toolInfo.ParamsOneOf = schema.NewParamsOneOfByJSONSchema(js)
+				}
+			}
+		}
+
+		result = append(result, toolInfo)
 	}
 	return result
 }

@@ -21,10 +21,10 @@ type Reservation struct {
 
 // TokenBucketLimiter 令牌桶限流器
 type TokenBucketLimiter struct {
-	rate       int           // 每秒令牌数
-	burst      int           // 桶容量
-	tokens     float64       // 当前令牌数
-	lastUpdate time.Time     // 上次更新时间
+	rate       int       // 每秒令牌数
+	burst      int       // 桶容量
+	tokens     float64   // 当前令牌数
+	lastUpdate time.Time // 上次更新时间
 	mu         sync.Mutex
 }
 
@@ -95,10 +95,10 @@ func (l *TokenBucketLimiter) refill() {
 
 // SlidingWindowLimiter 滑动窗口限流器
 type SlidingWindowLimiter struct {
-	limit      int
-	window     time.Duration
-	requests   []time.Time
-	mu         sync.Mutex
+	limit    int
+	window   time.Duration
+	requests []time.Time
+	mu       sync.Mutex
 }
 
 // NewSlidingWindowLimiter 创建滑动窗口限流器
@@ -165,11 +165,11 @@ func (l *SlidingWindowLimiter) Rate() (int, int) {
 
 // LeakyBucketLimiter 漏桶限流器
 type LeakyBucketLimiter struct {
-	rate       time.Duration // 漏出速率
-	capacity   int           // 桶容量
-	water      int           // 当前水量
-	lastLeak   time.Time     // 上次漏出时间
-	mu         sync.Mutex
+	rate     time.Duration // 漏出速率
+	capacity int           // 桶容量
+	water    int           // 当前水量
+	lastLeak time.Time     // 上次漏出时间
+	mu       sync.Mutex
 }
 
 // NewLeakyBucketLimiter 创建漏桶限流器
@@ -262,7 +262,7 @@ func (l *MultiLimiter) Wait(ctx context.Context) error {
 // Reserve 预留
 func (l *MultiLimiter) Reserve() Reservation {
 	for _, limiter := range l.limiters {
-			r := limiter.Reserve()
+		r := limiter.Reserve()
 		if !r.ok {
 			return r
 		}

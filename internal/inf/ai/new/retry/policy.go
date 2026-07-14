@@ -9,11 +9,11 @@ import (
 
 // Policy 重试策略
 type Policy struct {
-	maxRetries     int
-	initialDelay   time.Duration
-	maxDelay       time.Duration
-	multiplier     float64
-	jitter         bool
+	maxRetries      int
+	initialDelay    time.Duration
+	maxDelay        time.Duration
+	multiplier      float64
+	jitter          bool
 	retryableErrors map[string]bool
 }
 
@@ -23,11 +23,11 @@ type Option func(*Policy)
 // NewPolicy 创建重试策略
 func NewPolicy(opts ...Option) *Policy {
 	p := &Policy{
-		maxRetries:     3,
-		initialDelay:   100 * time.Millisecond,
-		maxDelay:       5 * time.Second,
-		multiplier:     2.0,
-		jitter:         true,
+		maxRetries:   3,
+		initialDelay: 100 * time.Millisecond,
+		maxDelay:     5 * time.Second,
+		multiplier:   2.0,
+		jitter:       true,
 		retryableErrors: map[string]bool{
 			"rate_limit_exceeded": true,
 			"timeout":             true,

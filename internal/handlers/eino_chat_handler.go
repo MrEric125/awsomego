@@ -32,6 +32,7 @@ func (h *ChatHandler) RegisterRoutes(r *gin.RouterGroup) {
 	{
 		ai.POST("/chat", h.ChatCompletion)
 		ai.POST("/chat/stream", h.ChatCompletionStream)
+		ai.POST("/listModels", h.ListModels)
 		//ai.POST("/summarize", h.Summarize)
 		//ai.POST("/translate", h.Translate)
 	}
@@ -102,6 +103,22 @@ func (h *ChatHandler) handleStream(c *gin.Context, req *model.ChatRequest) {
 			return false
 		}
 
+		// 转换流式 tool_calls
+		var deltaToolCalls []model.ToolCallInfo
+		if len(msg.ToolCalls) > 0 {
+			deltaToolCalls = make([]model.ToolCallInfo, len(msg.ToolCalls))
+			for i, tc := range msg.ToolCalls {
+				deltaToolCalls[i] = model.ToolCallInfo{
+					ID:   tc.ID,
+					Type: tc.Type,
+					Function: model.FunctionCallInfo{
+						Name:      tc.Function.Name,
+						Arguments: tc.Function.Arguments,
+					},
+				}
+			}
+		}
+
 		// 构造SSE事件
 		event := model.StreamEvent{
 			ID:      fmt.Sprintf("chatcmpl-%d", time.Now().UnixNano()),
@@ -112,8 +129,9 @@ func (h *ChatHandler) handleStream(c *gin.Context, req *model.ChatRequest) {
 				{
 					Index: 0,
 					Delta: model.Message{
-						Role:    string(msg.Role),
-						Content: msg.Content,
+						Role:      string(msg.Role),
+						Content:   msg.Content,
+						ToolCalls: deltaToolCalls,
 					},
 				},
 			},

@@ -4,6 +4,7 @@ import (
 	"awesome/internal/inf/ai/new/model"
 	"context"
 	"fmt"
+	einoModel "github.com/cloudwego/eino/components/model"
 
 	"github.com/cloudwego/eino/schema"
 )
@@ -19,6 +20,8 @@ type ChatAdapter interface {
 	// GetModelName 获取模型名称
 	GetModelName() string
 
+	GetChatModel() einoModel.ToolCallingChatModel
+
 	// Close 关闭适配器
 	Close() error
 }
@@ -28,6 +31,9 @@ type ChatOptions struct {
 	Temperature *float64
 	MaxTokens   *int
 	TopP        *float64
+	Stop        *[]string
+	Tools       []*schema.ToolInfo
+	Thinking    *string // thinking模式: "enabled", "disabled", "auto"
 }
 
 // AdapterFactory 适配器工厂

@@ -13,10 +13,10 @@ type LangChainConfig struct {
 	OpenAIBaseURL   string
 
 	// Azure OpenAI 配置
-	AzureAPIKey      string
-	AzureEndpoint    string
-	AzureDeployment  string
-	AzureAPIVersion  string
+	AzureAPIKey     string
+	AzureEndpoint   string
+	AzureDeployment string
+	AzureAPIVersion string
 
 	// Anthropic Claude 配置
 	AnthropicAPIKey string

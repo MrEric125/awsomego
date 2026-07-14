@@ -8,10 +8,10 @@ import (
 
 // Filter 安全过滤器
 type Filter struct {
-	patterns     []*regexp.Regexp
+	patterns       []*regexp.Regexp
 	sensitiveWords []string
-	replacement  string
-	mu           sync.RWMutex
+	replacement    string
+	mu             sync.RWMutex
 }
 
 // FilterOption 过滤器选项

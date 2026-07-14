@@ -26,19 +26,19 @@ func NewLogger(logger *zap.SugaredLogger) *Logger {
 
 // AuditEntry 审计条目
 type AuditEntry struct {
-	Timestamp   time.Time              `json:"timestamp"`
-	EventType   string                 `json:"event_type"`
-	RequestID   string                 `json:"request_id,omitempty"`
-	UserID      string                 `json:"user_id,omitempty"`
-	Model       string                 `json:"model,omitempty"`
-	Operation   string                 `json:"operation,omitempty"`
-	Duration    time.Duration          `json:"duration,omitempty"`
-	Status      string                 `json:"status"`
-	Error       string                 `json:"error,omitempty"`
-	Metadata    map[string]interface{} `json:"metadata,omitempty"`
-	Sensitive   bool                   `json:"sensitive,omitempty"`
-	IPAddress   string                 `json:"ip_address,omitempty"`
-	UserAgent   string                 `json:"user_agent,omitempty"`
+	Timestamp time.Time              `json:"timestamp"`
+	EventType string                 `json:"event_type"`
+	RequestID string                 `json:"request_id,omitempty"`
+	UserID    string                 `json:"user_id,omitempty"`
+	Model     string                 `json:"model,omitempty"`
+	Operation string                 `json:"operation,omitempty"`
+	Duration  time.Duration          `json:"duration,omitempty"`
+	Status    string                 `json:"status"`
+	Error     string                 `json:"error,omitempty"`
+	Metadata  map[string]interface{} `json:"metadata,omitempty"`
+	Sensitive bool                   `json:"sensitive,omitempty"`
+	IPAddress string                 `json:"ip_address,omitempty"`
+	UserAgent string                 `json:"user_agent,omitempty"`
 }
 
 // LogRequest 记录请求

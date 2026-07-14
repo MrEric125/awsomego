@@ -49,6 +49,12 @@ func LoadConfig() *Config {
 			Model:   ollamaModel,
 		}
 	}
+	cfg.Models["deepseek-coder:6.7b"] = ModelConfig{
+		Type:    "ollama",
+		APIKey:  getEnv("DEEPSEEK_API_KEY", ""),
+		BaseURL: getEnv("OLLAMA_BASE_URL", "http://localhost:11434"),
+		Model:   "deepseek-coder:6.7b",
+	}
 	if kimiModel := getEnv("KIMI_MODEL_NAME", ""); kimiModel != "" {
 		cfg.Models[kimiModel] = ModelConfig{
 			Type:    "openai",

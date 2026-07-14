@@ -134,12 +134,12 @@ func executeTransaction(ctx context.Context, db *gorm.DB, fn func(ctx context.Co
 	txOpts := &sql.TxOptions{
 		ReadOnly: options.ReadOnly,
 	}
-	
+
 	// 设置事务隔离级别
 	if options.IsolationLevel != "" {
 		txOpts.Isolation = convertIsolationLevel(options.IsolationLevel)
 	}
-	
+
 	tx := db.Begin(txOpts)
 
 	if tx.Error != nil {
